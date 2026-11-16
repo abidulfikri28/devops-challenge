@@ -33,6 +33,12 @@ variable "alarm_actions" {
   default     = []
 }
 
+variable "alarm_email_endpoint" {
+  description = "Optional email recipient for this queue's age alarm. The subscription must be confirmed after apply."
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Extra tags."
   type        = map(string)
