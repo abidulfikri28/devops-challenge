@@ -21,6 +21,25 @@ resource "aws_sqs_queue" "this" {
   tags = var.tags
 }
 
+resource "aws_sns_topic" "alarm" {
+  count = var.alarm_email_endpoint == "" ? 0 : 1
+
+  name = "${var.name}-alarms"
+  tags = var.tags
+}
+
+resource "aws_sns_topic_subscription" "alarm_email" {
+  count = var.alarm_email_endpoint == "" ? 0 : 1
+
+  topic_arn = aws_sns_topic.alarm[0].arn
+  protocol  = "email"
+  endpoint  = var.alarm_email_endpoint
+}
+
+locals {
+  notification_actions = concat(var.alarm_actions, aws_sns_topic.alarm[*].arn)
+}
+
 resource "aws_cloudwatch_metric_alarm" "oldest_message_age" {
   alarm_name        = "${var.name}-oldest-message-age"
   alarm_description = "Messages in ${var.name} are not being consumed"
@@ -38,8 +57,8 @@ resource "aws_cloudwatch_metric_alarm" "oldest_message_age" {
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
 
-  alarm_actions = var.alarm_actions
-  ok_actions    = var.alarm_actions
+  alarm_actions = local.notification_actions
+  ok_actions    = local.notification_actions
 
   tags = var.tags
 }

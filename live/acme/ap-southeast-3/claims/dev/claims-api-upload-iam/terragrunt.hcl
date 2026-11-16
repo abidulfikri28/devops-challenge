@@ -1,0 +1,56 @@
+include "root" {
+  path = find_in_parent_folders()
+}
+
+terraform {
+  source = "${get_repo_root()}/modules//irsa-role"
+}
+
+dependency "eks" {
+  config_path = "../../../platform/dev/eks"
+
+  mock_outputs = {
+    oidc_provider_arn = "arn:aws:iam::111111111111:oidc-provider/oidc.eks.ap-southeast-3.amazonaws.com/id/MOCK"
+  }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
+dependency "documents" {
+  config_path = "../claims-documents-bucket"
+
+  mock_outputs = {
+    bucket_arn = "arn:aws:s3:::acme-claims-documents-dev-111111111111"
+  }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
+dependency "queue" {
+  config_path = "../claims-documents-queue"
+
+  mock_outputs = {
+    queue_arn = "arn:aws:sqs:ap-southeast-3:111111111111:claims-documents-dev"
+  }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
+inputs = {
+  name              = "claims-api-upload-dev"
+  oidc_provider_arn = dependency.eks.outputs.oidc_provider_arn
+  namespace         = "claims"
+  service_account   = "claims-api"
+
+  policy_statements = [
+    {
+      sid       = "DocumentsUpload"
+      effect    = "Allow"
+      actions   = ["s3:PutObject"]
+      resources = ["${dependency.documents.outputs.bucket_arn}/uploads/*"]
+    },
+    {
+      sid       = "QueueDocumentForOcr"
+      effect    = "Allow"
+      actions   = ["sqs:SendMessage"]
+      resources = [dependency.queue.outputs.queue_arn]
+    },
+  ]
+}

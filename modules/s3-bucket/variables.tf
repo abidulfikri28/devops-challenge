@@ -15,6 +15,12 @@ variable "force_destroy" {
   default     = true
 }
 
+variable "private_bucket" {
+  description = "Manage public access blocking, bucket-owner enforcement, and explicit SSE-S3 encryption."
+  type        = bool
+  default     = false
+}
+
 variable "lifecycle_rules" {
   description = "Expiration rules by prefix."
   type = list(object({

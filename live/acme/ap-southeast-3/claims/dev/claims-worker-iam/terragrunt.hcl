@@ -24,6 +24,15 @@ dependency "queue" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
+dependency "documents" {
+  config_path = "../claims-documents-bucket"
+
+  mock_outputs = {
+    bucket_arn = "arn:aws:s3:::acme-claims-documents-dev-111111111111"
+  }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
 inputs = {
   name              = "claims-worker-dev"
   oidc_provider_arn = dependency.eks.outputs.oidc_provider_arn
@@ -41,6 +50,12 @@ inputs = {
         "sqs:GetQueueAttributes",
       ]
       resources = [dependency.queue.outputs.queue_arn]
+    },
+    {
+      sid       = "DocumentsRead"
+      effect    = "Allow"
+      actions   = ["s3:GetObject"]
+      resources = ["${dependency.documents.outputs.bucket_arn}/uploads/*"]
     },
   ]
 }

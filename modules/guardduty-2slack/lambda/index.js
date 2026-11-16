@@ -11,7 +11,13 @@ function severityLabel(severity) {
 }
 
 function buildMessage(finding) {
-  const instance = finding.resource.instanceDetails;
+  const resource = finding.resource || {};
+  const identifiers = [
+    resource.instanceDetails?.instanceId && `Instance: ${resource.instanceDetails.instanceId}`,
+    resource.s3BucketDetails?.[0]?.name && `Bucket: ${resource.s3BucketDetails[0].name}`,
+    resource.accessKeyDetails?.userName && `IAM user: ${resource.accessKeyDetails.userName}`,
+  ].filter(Boolean);
+  const resourceText = identifiers.length ? identifiers.join(' | ') : `Resource: ${resource.resourceType || 'unknown'}`;
 
   return {
     text: `:rotating_light: GuardDuty ${severityLabel(finding.severity)}: ${finding.title}`,
@@ -25,7 +31,7 @@ function buildMessage(finding) {
         elements: [
           {
             type: 'mrkdwn',
-            text: `Type: ${finding.type} | Account: ${finding.accountId} | Region: ${finding.region} | Instance: ${instance.instanceId}`,
+            text: `Type: ${finding.type} | Account: ${finding.accountId} | Region: ${finding.region} | ${resourceText}`,
           },
         ],
       },
@@ -40,7 +46,11 @@ function postToSlack(webhookUrl, payload) {
       { method: 'POST', headers: { 'Content-Type': 'application/json' } },
       (res) => {
         res.resume();
-        resolve();
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Slack webhook returned HTTP ${res.statusCode}`));
+        }
       },
     );
     req.on('error', reject);

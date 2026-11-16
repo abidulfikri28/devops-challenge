@@ -19,6 +19,10 @@ dependency "queue" {
   config_path = "../claims-documents-queue"
 }
 
+dependency "documents" {
+  config_path = "../claims-documents-bucket"
+}
+
 inputs = {
   name              = "claims-worker-prod"
   oidc_provider_arn = dependency.eks.outputs.oidc_provider_arn
@@ -31,6 +35,12 @@ inputs = {
       effect    = "Allow"
       actions   = ["sqs:*"]
       resources = ["*"]
+    },
+    {
+      sid       = "DocumentsRead"
+      effect    = "Allow"
+      actions   = ["s3:GetObject"]
+      resources = ["${dependency.documents.outputs.bucket_arn}/uploads/*"]
     },
   ]
 }
